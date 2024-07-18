@@ -2,7 +2,7 @@ from numba import jit, prange, set_num_threads
 import numpy as np
 import time
 
-MAX_M = 1600
+MAX_M = 2048
 
 
 @jit(nopython=True, parallel=True, nogil=True, cache=True)
@@ -27,8 +27,10 @@ def main():
         mulmat(ma, mb, mc)
         end_time = (time.time() - start_time)
 
+        print("[%dx%d]" % (MAX_M, MAX_M))
         print("%d threads" % n_thread)
-        print("Elapsed time: %.4f seconds\n" % end_time)
+        print("Elapsed time: %.4f seconds" % end_time)
+        print("%.4f\n" % end_time)
 
 
 if __name__ == "__main__":
