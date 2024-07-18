@@ -14,7 +14,7 @@ def compute_stencil(a, a_new, n_matrix):
     current_error = np.float64(0.0)
     for k in prange(2, (n_matrix - 2)):
         for j in range(2, (n_matrix - 2)):
-            a_ith = (a[k][j] + a[k][j + 1] + a[k][j - 1] + a[k - 1][j] + a[k + 1][j]) * 0.2
+            a_ith = (a[k][j + 1] + a[k][j - 1] + a[k - 1][j] + a[k + 1][j]) * 0.25
             current_error = max(current_error, abs(a_ith - a[k][j]))
             a_new[k][j] = a_ith
 

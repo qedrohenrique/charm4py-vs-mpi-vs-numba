@@ -82,6 +82,9 @@ class Jacobi(Chare):
         converged = False
         while not converged and iteration < MAX_ITER:
             # send ghost faces to my neighbors. sends are asynchronous
+            # example:
+            # - send face to left neighbor
+            # - left neighbor received message from RIGHT neighbor
             if not self.leftBound:
                 self.left_nb.send(RIGHT, self.temperature[1, 1:blockDimY + 1])
             if not self.rightBound:
@@ -110,9 +113,6 @@ class Jacobi(Chare):
                                           self.istart, self.ifinish, self.jstart, self.jfinish)
             self.temperature, self.new_temperature = self.new_temperature, self.temperature
             converged = self.allreduce(max_error <= THRESHOLD, Reducer.logical_and).get()
-            # if(converged):
-            #     import pandas as pd
-            #     print(pd.DataFrame(self.temperature))
             iteration += 1
 
         if self.thisIndex == (0, 0):
@@ -121,18 +121,21 @@ class Jacobi(Chare):
 
     def constrainBC(self):
         # enforce some boundary conditions
-        if self.topBound:
+        if self.leftBound:
             self.temperature[0:blockDimX + 2, 1] = 1.0
             self.new_temperature[0:blockDimX + 2, 1] = 1.0
-        if self.leftBound:
+        if self.topBound:
             self.temperature[1, 0:blockDimY + 2] = 1.0
             self.new_temperature[1, 0:blockDimY + 2] = 1.0
-        if self.bottomBound:
+        if self.rightBound:
             self.temperature[0:blockDimX + 2, blockDimY] = 1.0
             self.new_temperature[0:blockDimX + 2, blockDimY] = 1.0
-        if self.rightBound:
+        if self.bottomBound:
             self.temperature[blockDimX, 0:blockDimY + 2] = 1.0
             self.new_temperature[blockDimX, 0:blockDimY + 2] = 1.0
+
+        import pandas as pd
+        print(pd.DataFrame(self.temperature))
 
 
 @jit(nopython=True, cache=False)
@@ -141,9 +144,8 @@ def check_and_compute(temperature, new_temperature, istart, ifinish, jstart, jfi
     # when all neighbor values have been received, we update our values and proceed
     for i in range(istart, ifinish):
         for j in range(jstart, jfinish):
-            temperature_ith = (temperature[i, j]
-                               + temperature[i - 1, j] + temperature[i + 1, j]
-                               + temperature[i, j - 1] + temperature[i, j + 1]) * 0.2
+            temperature_ith = (temperature[i - 1, j] + temperature[i + 1, j]
+                               + temperature[i, j - 1] + temperature[i, j + 1]) * 0.25
             # update relative error
             max_error = max(max_error, abs(temperature_ith - temperature[i, j]))
             new_temperature[i, j] = temperature_ith
