@@ -2,7 +2,7 @@ from numba import jit
 import numpy as np
 import time
 
-MAX_M = 512 + 2
+MAX_M = 2048 + 2
 MAX_ITER = 100000
 MAX_TOL = 0.0001
 INITIAL_ERR = 1000000.0
