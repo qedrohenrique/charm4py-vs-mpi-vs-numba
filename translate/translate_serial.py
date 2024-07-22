@@ -5,7 +5,7 @@ from deep_translator import GoogleTranslator
 
 list_translated = []
 
-f = open('../input', 'r')
+f = open('input', 'r')
 input_text = f.read()
 iterable_text = input_text.split('.')
 f.close()
@@ -21,5 +21,5 @@ for idx, line in enumerate(iterable_text):
 
 print('\nElapsed time: ', round(time.time() - t0, 3), 's', sep='')
 
-out_file = open('../out', 'w')
+out_file = open('out', 'w')
 out_file.write(' '.join(list_translated))
