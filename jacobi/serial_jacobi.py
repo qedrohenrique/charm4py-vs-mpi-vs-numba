@@ -2,7 +2,7 @@ from numba import jit
 import numpy as np
 import time
 
-MAX_M = 2048 + 2
+MAX_M = 512 + 2
 MAX_ITER = 100000
 MAX_TOL = 0.0001
 INITIAL_ERR = 1000000.0
@@ -42,11 +42,8 @@ for i in range(0, MAX_M):
 
 start_time = time.time()
 while err > MAX_TOL and iters < MAX_ITER:
-    if iters % 2 == 0:
-        err = compute_stencil(a, a_new, MAX_M, MAX_M)
-    else:
-        err = compute_stencil(a_new, a, MAX_M, MAX_M)
-    iters += 1
+    err = compute_stencil(a, a_new, MAX_M, MAX_M)
+    a_new, a = a, a_new
 
 end_time = (time.time() - start_time)
 
