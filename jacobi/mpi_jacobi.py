@@ -1,51 +1,95 @@
 from mpi4py import MPI
 import numpy as np
+from numba import jit
 import sys
+import time
 
 MAX_ITER = 10000
 THRESHOLD = 0.0001
 INITIAL_ERR = 1_000_000.0
-MATRIX_SIZE = 512+2
+
+
+def get_bounds(rank, num_processes):
+    start = end = None
+
+    if rank == 0:
+        start = 1
+    else:
+        start = (rank * MATRIX_SIZE / num_processes + 1) - 1
+
+    if rank == num_processes - 1:
+        end = MATRIX_SIZE - 2
+    else:
+        end = ((rank + 1) * MATRIX_SIZE / num_processes) - 1
+
+    return int(start), int(end)
 
 
 def jacobi(a, a_new):
     comm = MPI.COMM_WORLD
     rank = comm.Get_rank()
+    num_processes = comm.Get_size()
 
-    if rank == 0:
-        a[0][0] = 12
-        comm.send(a[0][0], 1, 10)
-    if rank == 1:
-        data = comm.recv(source=0, tag=10)
-        print(data)
-        print(a[0][0])
+    max_error = 9999999
+    iteration = 0
+    converged = False
 
-    exit()
+    start, end = get_bounds(rank, num_processes)
+    status = None
+
+    while not converged and iteration < MAX_ITER:
+        # Message to left
+        send_data_left = np.array(a[1:MATRIX_SIZE, end], dtype='i')
+        recv_buff_right = np.empty(MATRIX_SIZE - 1, dtype='i')
+        comm.Sendrecv(
+            send_data_left, (rank - 1) % num_processes, 20,
+            recv_buff_right, (rank + num_processes + 1) % num_processes, 20,
+            status
+        )
+
+        # Message to right
+        send_data_right = (np.array(a[end, 1:MATRIX_SIZE + 1], dtype='i'), MATRIX_SIZE - 2, MPI.INT)
+        recv_buff_left = np.empty(MATRIX_SIZE - 1, dtype='i')
+        comm.Sendrecv(
+            send_data_right, (rank + 1) % num_processes, 10,
+            recv_buff_left, ((rank - 1) + num_processes) % num_processes, 10,
+            status
+        )
+
+        comm.Barrier()
+
+        max_error = check_and_compute(a, a_new, start, end)
+        a, a_new = a_new, a
+        converged = comm.allreduce(max_error < THRESHOLD, op=MPI.LAND)
+        iteration += 1
+
+    return iteration, max_error
+
+
+@jit(nopython=True, cache=False)
+def check_and_compute(a, a_new, start, end):
+    max_error = np.float64(0.0)
+
+    for i in range(2, MATRIX_SIZE - 2):
+        for j in range(start, end):
+            a_ith = (a[i - 1, j] + a[i + 1, j] + a[i, j - 1] + a[i, j + 1]) * 0.25
+            max_error = max(max_error, abs(a_ith - a[i, j]))
+            a_new[i, j] = a_ith
+
+    return max_error
 
 
 def setup_input(args):
-    global arrayDimX, arrayDimY, blockDimX, blockDimY, num_chare_x, num_chare_y
+    global MATRIX_SIZE
 
-    if len(args) != 3 and len(args) != 5:
+    if len(args) != 2:
         if MPI.COMM_WORLD.Get_rank() == 0:
-            print('\nUsage:\t', args[0], 'array_size block_size')
-            print('\t', args[0], 'array_size_X array_size_Y block_size_X block_size_Y')
+            print('\nUsage:\t', args[0], 'array_size')
             exit()
         else:
             exit()
 
-    if len(args) == 3:
-        arrayDimX = arrayDimY = int(args[1])
-        blockDimX = blockDimY = int(args[2])
-    elif len(args) == 5:
-        arrayDimX, arrayDimY = [int(arg) for arg in args[1:3]]
-        blockDimX, blockDimY = [int(arg) for arg in args[3:5]]
-
-    assert (arrayDimX >= blockDimX) and (arrayDimX % blockDimX == 0)
-    assert (arrayDimY >= blockDimY) and (arrayDimY % blockDimY == 0)
-
-    num_chare_x = arrayDimX // blockDimX
-    num_chare_y = arrayDimY // blockDimY
+    MATRIX_SIZE = int(args[1]) + 2
 
 
 def setup_matrixes(max_m, max_n):
@@ -74,9 +118,19 @@ def setup_matrixes(max_m, max_n):
 def main(args):
     setup_input(args)
 
-    a, a_new = setup_matrixes(arrayDimX, arrayDimY)
+    a, a_new = setup_matrixes(MATRIX_SIZE, MATRIX_SIZE)
 
-    jacobi(a, a_new)
+    initTime = time.time()
+    its, err = jacobi(a, a_new)
+    totalTime = time.time() - initTime
+
+    if MPI.COMM_WORLD.Get_rank() == 0:
+        print("\n[%dx%d]" % (MATRIX_SIZE - 2, MATRIX_SIZE - 2))
+        print("%d processes" % MPI.COMM_WORLD.Get_size())
+        print("%d iterations" % its)
+        print("Final error: ", err)
+        print("Elapsed time: %.4f seconds" % totalTime)
+        print("%.4f\n" % totalTime)
 
 
 if __name__ == '__main__':
