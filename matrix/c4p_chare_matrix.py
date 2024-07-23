@@ -1,8 +1,9 @@
 from charm4py import charm, Chare, Array, Future, coro, Reducer
 import numpy as np
 import time
+from numba import jit
 
-MAX_M = 512
+MAX_M = 2048
 
 class MatrixMultiply(Chare):
 
@@ -17,19 +18,33 @@ class MatrixMultiply(Chare):
         self.start = charm.myPe() * dimension
         self.end = self.start + dimension - 1
 
-        self.done = False
 
     @coro
     def run(self):
         # print('PE [%d] - %d to %d' % (charm.myPe(), self.start, self.end))
 
-        for i in range(self.start, self.end + 1):
-            for j in range(MAX_M):
-                for k in range(MAX_M):
-                    mc_i = i - self.start
-                    self.mc[mc_i][j] += self.ma[i][k] * self.mb[k][j]
+        self.mc = compute(self.ma, self.mb, self.mc, self.start, self.end)
 
         self.reduce(self.sim_done_future, self.mc.tolist(), Reducer.gather)  # Sync all Chares
+
+
+@jit(nopython=True, cache=False)
+def compute(ma, mb, mc, start, end):
+    for i in range(start, end + 1):
+        for j in range(MAX_M):
+            for k in range(MAX_M):
+                mc_i = i - start
+                mc[mc_i][j] += ma[i][k] * mb[k][j]
+
+    return mc
+
+
+def no_jit_compute(ma, mb, mc, start, end):
+    for i in range(start, end + 1):
+        for j in range(MAX_M):
+            for k in range(MAX_M):
+                mc_i = i - start
+                mc[mc_i][j] += ma[i][k] * mb[k][j]
 
 
 def main(args):
@@ -57,6 +72,7 @@ def main(args):
     print("%d processes" % (charm.numPes()))
     print("Elapsed time: %.4f seconds" % totalTime)
     print("%.4f\n" % totalTime)
+    exit(0)
 
 charm.start(main)
 
