@@ -5,6 +5,7 @@ from numba import jit
 
 MAX_M = 2048
 
+
 class MatrixMultiply(Chare):
 
     def __init__(self, ma, mb, sim_done_future):

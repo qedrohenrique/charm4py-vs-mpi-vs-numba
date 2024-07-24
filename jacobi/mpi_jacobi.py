@@ -32,7 +32,6 @@ def jacobi(a, a_new):
     converged = False
 
     start, end = get_bounds()
-    status = None
 
     while not converged and iteration < MAX_ITER:
         recv_buff_right = np.empty(MATRIX_SIZE - 2, dtype='f')
