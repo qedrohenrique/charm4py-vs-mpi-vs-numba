@@ -4,7 +4,7 @@ from numba import jit
 import sys
 import time
 
-MAX_ITER = 100_000
+MAX_ITER = 10_000
 THRESHOLD = 0.0001
 INITIAL_ERR = 1_000_000.0
 

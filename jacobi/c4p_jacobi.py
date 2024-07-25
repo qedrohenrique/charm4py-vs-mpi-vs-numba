@@ -9,30 +9,23 @@ try:
 except ImportError:
     numbaFound = False
 
-    # create a dummy numba.jit decorator
-
     def jit(*args, **kwargs):
         def deco(func):
             return func
 
         return deco
 
-MAX_ITER = 10000
+MAX_ITER = 10_000
 LEFT, RIGHT, TOP, BOTTOM = range(4)
 THRESHOLD = 0.0001
-INITIAL_ERR = 1000000.0
+INITIAL_ERR = 1_000_000.0
 
 
 class Jacobi(Chare):
-
     def __init__(self, sim_done_future):
-        # store future to notify main function when computation is done
         self.sim_done_future = sim_done_future
-        # each chare has a 2D block of the global array (the block is a 2D NumPy array)
         self.temperature = np.zeros((blockDimX + 2, blockDimY + 2), dtype=np.float64)
         self.new_temperature = np.zeros((blockDimX + 2, blockDimY + 2), dtype=np.float64)
-
-        # determine border conditions, who my neighbors are and establish Channels with them
         self.leftBound = self.rightBound = self.topBound = self.bottomBound = False
         self.istart = self.jstart = 1
         self.ifinish = blockDimX + 1
@@ -70,9 +63,6 @@ class Jacobi(Chare):
 
         self.constrainBC()
 
-        # import pandas as pd
-        # print(pd.DataFrame(self.temperature))
-
 
     @coro
     def run(self):
@@ -81,10 +71,6 @@ class Jacobi(Chare):
         max_error = INITIAL_ERR
         converged = False
         while not converged and iteration < MAX_ITER:
-            # send ghost faces to my neighbors. sends are asynchronous
-            # example:
-            # - send face to left neighbor
-            # - left neighbor received message from RIGHT neighbor
             if not self.leftBound:
                 self.left_nb.send(RIGHT, self.temperature[1, 1:blockDimY + 1])
             if not self.rightBound:
@@ -94,8 +80,6 @@ class Jacobi(Chare):
             if not self.bottomBound:
                 self.bottom_nb.send(TOP, self.temperature[1:blockDimX + 1, blockDimY])
 
-            # receive ghost data from neighbors. iawait iteratively yields
-            # channels as they become ready (have data to receive)
             for nb in charm.iwait(self.nbs):
                 direction, ghosts = nb.recv()
                 if direction == LEFT:
@@ -116,11 +100,9 @@ class Jacobi(Chare):
             iteration += 1
 
         if self.thisIndex == (0, 0):
-            # notify main function that computation has ended and report the iteration number
             self.sim_done_future.send([iteration, max_error])
 
     def constrainBC(self):
-        # enforce some boundary conditions
         if self.leftBound:
             self.temperature[0:blockDimX + 2, 1] = 1.0
             self.new_temperature[0:blockDimX + 2, 1] = 1.0
@@ -134,19 +116,14 @@ class Jacobi(Chare):
             self.temperature[blockDimX, 0:blockDimY + 2] = 1.0
             self.new_temperature[blockDimX, 0:blockDimY + 2] = 1.0
 
-        import pandas as pd
-        print(pd.DataFrame(self.temperature))
-
 
 @jit(nopython=True, cache=False)
 def check_and_compute(temperature, new_temperature, istart, ifinish, jstart, jfinish):
     max_error = np.float64(0.0)
-    # when all neighbor values have been received, we update our values and proceed
     for i in range(istart, ifinish):
         for j in range(jstart, jfinish):
             temperature_ith = (temperature[i - 1, j] + temperature[i + 1, j]
                                + temperature[i, j - 1] + temperature[i, j + 1]) * 0.25
-            # update relative error
             max_error = max(max_error, abs(temperature_ith - temperature[i, j]))
             new_temperature[i, j] = temperature_ith
 
@@ -179,7 +156,6 @@ def main(args):
     num_chare_x = arrayDimX // blockDimX
     num_chare_y = arrayDimY // blockDimY
 
-    # set the following global variables on every PE, wait for the call to complete
     charm.thisProxy.updateGlobals({'blockDimX': blockDimX,
                                    'blockDimY': blockDimY,
                                    'num_chare_x': num_chare_x,
@@ -193,21 +169,19 @@ def main(args):
     print('Threshold:', THRESHOLD)
 
     if numbaFound:
-        # wait until Numba functions are compiled on every PE, so we can get consistent benchmark results
         Group(Util).compile(awaitable=True).get()
         print('Numba compilation complete')
     else:
         print('!!WARNING!! Numba not found. Will run without Numba but it will be very slow')
 
     sim_done = Future()
-    # create 2D chare array of Jacobi objects (each chare will hold one block)
     array = Array(Jacobi, (num_chare_x, num_chare_y), args=[sim_done])
     charm.awaitCreation(array)
 
     print('Starting computation')
     initTime = time.time()
-    array.run()  # this is a broadcast
-    total_iterations, max_err = sim_done.get()  # wait until the computation completes
+    array.run()
+    total_iterations, max_err = sim_done.get()
     totalTime = time.time() - initTime
 
     print("\n[%dx%d]" % (arrayDimX, arrayDimX))

@@ -2,10 +2,10 @@ from numba import jit
 import numpy as np
 import time
 
-MAX_M = 512 + 2
-MAX_ITER = 100000
-MAX_TOL = 0.0001
-INITIAL_ERR = 1000000.0
+MAX_ITER = 10_000
+THRESHOLD = 0.0001
+INITIAL_ERR = 1_000_000.0
+MATRIX_SIZE = 512+2
 
 
 @jit()
@@ -19,35 +19,36 @@ def compute_stencil(a, a_new, m, n):
     return current_error
 
 
-a = np.zeros((MAX_M, MAX_M))
-a_new = np.zeros((MAX_M, MAX_M))
+a = np.zeros((MATRIX_SIZE, MATRIX_SIZE))
+a_new = np.zeros((MATRIX_SIZE, MATRIX_SIZE))
 err = INITIAL_ERR
 iters = 0
 
-for i in range(0, MAX_M):
+for i in range(0, MATRIX_SIZE):
     a[1][i] = 1.0
     a_new[1][i] = 1.0
 
-for i in range(0, MAX_M):
-    a[MAX_M - 2][i] = 1.0
-    a_new[MAX_M - 2][i] = 1.0
+for i in range(0, MATRIX_SIZE):
+    a[MATRIX_SIZE - 2][i] = 1.0
+    a_new[MATRIX_SIZE - 2][i] = 1.0
 
-for i in range(0, MAX_M):
+for i in range(0, MATRIX_SIZE):
     a[i][1] = 1.0
     a_new[i][1] = 1.0
 
-for i in range(0, MAX_M):
-    a[i][MAX_M - 2] = 1.0
-    a_new[i][MAX_M - 2] = 1.0
+for i in range(0, MATRIX_SIZE):
+    a[i][MATRIX_SIZE - 2] = 1.0
+    a_new[i][MATRIX_SIZE - 2] = 1.0
 
 start_time = time.time()
-while err > MAX_TOL and iters < MAX_ITER:
-    err = compute_stencil(a, a_new, MAX_M, MAX_M)
+while err > THRESHOLD and iters < MAX_ITER:
+    err = compute_stencil(a, a_new, MATRIX_SIZE, MATRIX_SIZE)
     a_new, a = a, a_new
+    iters += 1
 
 end_time = (time.time() - start_time)
 
-print("\n[%dx%d]" % (MAX_M - 2, MAX_M - 2))
+print("\n[%dx%d]" % (MATRIX_SIZE - 2, MATRIX_SIZE - 2))
 print("%d iterations" % iters)
 print("Final error: ", err)
 print("Elapsed time: %.4f seconds" % end_time)

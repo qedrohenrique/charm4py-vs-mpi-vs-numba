@@ -2,11 +2,11 @@ from numba import jit, prange, set_num_threads
 import numpy as np
 import time
 
-MAX_ITER = 100000
-MAX_TOL = 0.0001
-INITIAL_ERR = 1000000.0
-THREADS = [1, 2, 4, 8, 16]
+MAX_ITER = 10_000
+THRESHOLD = 0.0001
+INITIAL_ERR = 1_000_000.0
 MATRIX_SIZE = 512+2
+THREADS = [1, 2, 4, 8, 16]
 
 
 @jit(parallel=True, nogil=True, cache=False, nopython=True)
@@ -56,7 +56,7 @@ def main():
 
         start_time = time.time()
 
-        while err > MAX_TOL and iters < MAX_ITER:
+        while err > THRESHOLD and iters < MAX_ITER:
             err = compute_stencil(a, a_new, MATRIX_SIZE)
             a, a_new = a_new, a
             iters += 1
