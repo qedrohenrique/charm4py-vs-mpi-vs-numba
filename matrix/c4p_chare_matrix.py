@@ -3,17 +3,17 @@ import numpy as np
 import time
 from numba import jit
 
-MAX_M = 2048
+MATRIX_SIZE = 2048
 
 
 class MatrixMultiply(Chare):
 
     def __init__(self, ma, mb, sim_done_future):
-        dimension = MAX_M // charm.numPes()
+        dimension = MATRIX_SIZE // charm.numPes()
 
         self.ma = ma
         self.mb = mb
-        self.mc = np.zeros(shape=(dimension, MAX_M))
+        self.mc = np.zeros(shape=(dimension, MATRIX_SIZE))
         self.sim_done_future = sim_done_future
 
         self.start = charm.myPe() * dimension
@@ -32,8 +32,8 @@ class MatrixMultiply(Chare):
 @jit(nopython=True, cache=False)
 def compute(ma, mb, mc, start, end):
     for i in range(start, end + 1):
-        for j in range(MAX_M):
-            for k in range(MAX_M):
+        for j in range(MATRIX_SIZE):
+            for k in range(MATRIX_SIZE):
                 mc_i = i - start
                 mc[mc_i][j] += ma[i][k] * mb[k][j]
 
@@ -42,15 +42,15 @@ def compute(ma, mb, mc, start, end):
 
 def no_jit_compute(ma, mb, mc, start, end):
     for i in range(start, end + 1):
-        for j in range(MAX_M):
-            for k in range(MAX_M):
+        for j in range(MATRIX_SIZE):
+            for k in range(MATRIX_SIZE):
                 mc_i = i - start
                 mc[mc_i][j] += ma[i][k] * mb[k][j]
 
 
 def main(args):
-    ma = np.random.randint(10, size=(MAX_M, MAX_M))
-    mb = np.random.randint(10, size=(MAX_M, MAX_M))
+    ma = np.random.randint(10, size=(MATRIX_SIZE, MATRIX_SIZE))
+    mb = np.random.randint(10, size=(MATRIX_SIZE, MATRIX_SIZE))
 
     sim_done = Future()
 
@@ -69,7 +69,7 @@ def main(args):
     #
     # print(flattened_result)
 
-    print("[%dx%d]" % (MAX_M, MAX_M))
+    print("[%dx%d]" % (MATRIX_SIZE, MATRIX_SIZE))
     print("%d processes" % (charm.numPes()))
     print("Elapsed time: %.4f seconds" % totalTime)
     print("%.4f\n" % totalTime)
