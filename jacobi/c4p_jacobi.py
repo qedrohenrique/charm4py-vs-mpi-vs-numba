@@ -26,6 +26,7 @@ class Jacobi(Chare):
         self.sim_done_future = sim_done_future
         self.temperature = np.zeros((blockDimX + 2, blockDimY + 2), dtype=np.float64)
         self.new_temperature = np.zeros((blockDimX + 2, blockDimY + 2), dtype=np.float64)
+
         self.leftBound = self.rightBound = self.topBound = self.bottomBound = False
         self.istart = self.jstart = 1
         self.ifinish = blockDimX + 1
@@ -62,7 +63,6 @@ class Jacobi(Chare):
             self.nbs.append(self.bottom_nb)
 
         self.constrainBC()
-
 
     @coro
     def run(self):
@@ -103,18 +103,18 @@ class Jacobi(Chare):
             self.sim_done_future.send([iteration, max_error])
 
     def constrainBC(self):
-        if self.leftBound:
-            self.temperature[0:blockDimX + 2, 1] = 1.0
-            self.new_temperature[0:blockDimX + 2, 1] = 1.0
         if self.topBound:
-            self.temperature[1, 0:blockDimY + 2] = 1.0
-            self.new_temperature[1, 0:blockDimY + 2] = 1.0
-        if self.rightBound:
-            self.temperature[0:blockDimX + 2, blockDimY] = 1.0
-            self.new_temperature[0:blockDimX + 2, blockDimY] = 1.0
+            self.temperature[0:blockDimX+2, 1] = 1.0
+            self.new_temperature[0:blockDimX+2, 1] = 1.0
+        if self.leftBound:
+            self.temperature[1, 0:blockDimY+2] = 1.0
+            self.new_temperature[1, 0:blockDimY+2] = 1.0
         if self.bottomBound:
-            self.temperature[blockDimX, 0:blockDimY + 2] = 1.0
-            self.new_temperature[blockDimX, 0:blockDimY + 2] = 1.0
+            self.temperature[0:blockDimX+2, blockDimY] = 1.0
+            self.new_temperature[0:blockDimX+2, blockDimY] = 1.0
+        if self.rightBound:
+            self.temperature[blockDimX, 0:blockDimY+2] = 1.0
+            self.new_temperature[blockDimX, 0:blockDimY+2] = 1.0
 
 
 @jit(nopython=True, cache=False)
