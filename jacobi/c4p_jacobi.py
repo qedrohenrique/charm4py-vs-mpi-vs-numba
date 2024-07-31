@@ -72,7 +72,7 @@ class Jacobi(Chare):
         max_error = INITIAL_ERR
         converged = False
         # while not converged and iteration < MAX_ITER:
-        while iteration <= MIN_ITER:
+        while iteration < MIN_ITER:
             if not self.leftBound:
                 self.left_nb.send(RIGHT, self.temperature[1, 1:blockDimY + 1])
             if not self.rightBound:
