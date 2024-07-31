@@ -16,6 +16,7 @@ except ImportError:
         return deco
 
 MAX_ITER = 10_000
+MIN_ITER = 3_602
 LEFT, RIGHT, TOP, BOTTOM = range(4)
 THRESHOLD = 0.0001
 INITIAL_ERR = 1_000_000.0
@@ -70,7 +71,8 @@ class Jacobi(Chare):
         iteration = 0
         max_error = INITIAL_ERR
         converged = False
-        while not converged and iteration < MAX_ITER:
+        # while not converged and iteration < MAX_ITER:
+        while iteration <= MIN_ITER:
             if not self.leftBound:
                 self.left_nb.send(RIGHT, self.temperature[1, 1:blockDimY + 1])
             if not self.rightBound:
