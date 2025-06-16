@@ -1,3 +1,15 @@
-### Testing speed performance of Charm4Py, Mpi4Py and Numba.
+# Python Parallel Programming Performance
 
-Also has some other stuff like serial implementations and translating texts :)
+This repository contains implementations of common tasks to test the performance of some Python HPC frameworks.
+
+## Frameworks
+
+- [Charm4Py](https://charm4py.readthedocs.io/en/latest/)
+- [MPI for Python (mpi4py)](https://mpi4py.readthedocs.io/en/stable/)
+- [Numba](https://numba.pydata.org)
+
+## Cases
+- Jacobi Method
+- Matrix Multiplication
+- Numeric Sequences (e.g., Fibonacci)
+- Text Translation
