@@ -58,12 +58,10 @@ def compute_proc_grid(size):
     try:
         px, py = MPI.Compute_dims(size, 2)
     except TypeError:
-        # versões mais antigas de mpi4py usam assinatura (nnodes, dims_list)
         dims = [0, 0]
         MPI.Compute_dims(size, dims)
         px, py = dims
 
-    # Se ainda veio algo inválido, calcula manualmente
     if px == 0 or py == 0:
         px = int(math.sqrt(size))
         while size % px != 0:
@@ -247,4 +245,5 @@ def main(argv):
         print("\nSimulação concluída em", round(elapsed, 3), "segundos.")
 
 if __name__ == "__main__":
+
     main(sys.argv)
